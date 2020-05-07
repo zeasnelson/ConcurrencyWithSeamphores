@@ -4,10 +4,11 @@ public class Main {
 
     public static void main(String[] args) {
 
-        Shared.numberOfPassengers = 30;
-        Shared.groupNum = 4;
-        Shared.counterNum = 3;
+        Shared.numberOfPassengers = 19;  // num of passengers in simulation
+        Shared.groupNum = 4;             // size of group when entering plane
+        Shared.counterNum = 3;           // clerk line length
 
+        // create threads
         FlightAttendant flightAttendant = new FlightAttendant();
         Clerk clerkOne = new Clerk("ClerkOne");
         Clerk clerkTwo = new Clerk("ClerkTwo");
@@ -18,6 +19,7 @@ public class Main {
             passengers.add(new Passenger("Passenger-"+(i+1), clerkOne, clerkTwo, flightAttendant));
         }
 
+        // start threads
         clock.start();
         passengers.forEach(Passenger::start);
         clerkOne.start();

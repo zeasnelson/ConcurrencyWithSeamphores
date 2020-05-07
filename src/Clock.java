@@ -59,9 +59,9 @@ public class Clock extends Thread {
      */
     public int getDepartTime(int numOfPassengers){
         if( numOfPassengers <= 10)
-            return 6000;
+            return 10000;
         else if( numOfPassengers <= 20)
-            return 12000;
+            return 15000;
         else
             return 20000;
     }
