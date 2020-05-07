@@ -9,24 +9,35 @@ public class Passenger extends Thread {
     // Store the zone number
     private int zoneNum;
 
-    //
+    // to know if a passenger missed the flight
     private Boolean missedFlight;
 
     // To save the start time for the thread
     private long startTime;
 
+    // reference to both clerks
     private Clerk clerkOne, clerkTwo;
+
+    // reference to the flightAttendant
     private FlightAttendant flightAttendant;
 
-    private Semaphore exitPlane;
+    // to let the passenger know when its time to exit plane
+    private Semaphore exitPlaneSem;
+
+    // blocking sem for the clerk to let this passenger continue to the gate
+    private Semaphore goToGateSem;
 
     public Passenger(String passengerID, Clerk clerkOne, Clerk clerkTwo, FlightAttendant flightAttendant){
         super(passengerID);
         this.clerkOne = clerkOne;
         this.clerkTwo = clerkTwo;
-        this.flightAttendant = flightAttendant;
+
         this.missedFlight = true;
-        this.exitPlane = new Semaphore(0, false);
+
+        this.flightAttendant = flightAttendant;
+
+        this.exitPlaneSem = new Semaphore(0, false);
+        this.goToGateSem  = new Semaphore(0, false);
     }
 
     public void setMissedFlight(Boolean missedFlight) {
@@ -41,6 +52,10 @@ public class Passenger extends Thread {
         return seatNum;
     }
 
+    public int getZoneNum(){
+        return zoneNum;
+    }
+
     public void setSeatNum(int seatNum) {
         this.seatNum = seatNum;
     }
@@ -49,10 +64,22 @@ public class Passenger extends Thread {
         this.zoneNum = zoneNum;
     }
 
+    public Semaphore getToGateSem(){
+        return goToGateSem;
+    }
+
+    public Semaphore getExitPlaneSem(){
+        return exitPlaneSem;
+    }
+
     public void msg(String msg){
         System.out.println("["+getTime()+"] " + getName() + ": " + msg);
     }
 
+    /**
+     * P(S)
+     * @param sem semaphore
+     */
     public void wait(Semaphore sem){
         try {
             sem.acquire();
@@ -61,6 +88,10 @@ public class Passenger extends Thread {
         }
     }
 
+    /**
+     * V(S)
+     * @param sem semaphore
+     */
     public void signal(Semaphore sem){
         sem.release();
     }
@@ -73,10 +104,6 @@ public class Passenger extends Thread {
      */
     public int compareSeatNumber(Passenger OtherPassenger) {
         return seatNum - OtherPassenger.getSeatNum();
-    }
-
-    public void exitPlane(){
-        exitPlane.release();
     }
 
     /**
@@ -119,23 +146,18 @@ public class Passenger extends Thread {
     public void goToFlightAttendantLine(){
         switch (zoneNum) {
             case 1:
-                flightAttendant.addToZoneOneQueue(this);
                 msg("ZoneNum: " + zoneNum + " waiting in zone one line");
                 wait(flightAttendant.getZoneOneLineSem());
                 break;
             case 2:
-                flightAttendant.addToZoneTwoQueue(this);
                 msg("ZoneNum: " + zoneNum + " waiting in zone two line");
                 wait(flightAttendant.getZoneTwoLineSem());
                 break;
             case 3:
-                flightAttendant.addToZoneThreeQueue(this);
                 msg("ZoneNum: " + zoneNum + " waiting in zone three line");
                 wait(flightAttendant.getZoneThreeLineSem());
         }
     }
-
-
 
     @Override
     public void run() {
@@ -149,6 +171,9 @@ public class Passenger extends Thread {
 
         // wait at the line to get a seat and zone number
         goToClerkLine();
+
+        //wait until clerk assigns a seat and zone number
+        wait(goToGateSem);
 
         msg("Walking to the gate");
         randomTime = rand.nextInt(3000)+3000;
@@ -179,18 +204,19 @@ public class Passenger extends Thread {
 
             // all passengers wait here until they form a group of size groupNum
             wait(Shared.groupMutex);
-            msg("entered plane - going to sleep");
+            msg("seatNum: " + seatNum + " zoneNum: " + zoneNum + " entered plane");
 
 
             // wait to exit plane
-            wait(exitPlane);
+            wait(exitPlaneSem);
 
             msg("seatNum: " + seatNum + " leaving plane");
 
+            int numOfPassengersInPlane = flightAttendant.getNumOfPassengersInPlane();
             wait(Shared.mutex);
             Shared.numberOfPassengers++;
             // last passenger, signal FlightAttendant to start cleaning
-            if ( Shared.numberOfPassengers == Shared.numOfPassengersInPlane ) {
+            if ( Shared.numberOfPassengers == numOfPassengersInPlane ) {
                 signal(flightAttendant.getGoHomeSem());
             }
             signal(Shared.mutex);

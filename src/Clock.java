@@ -11,6 +11,10 @@ public class Clock extends Thread {
         this.flightAttendant = flightAttendant;
     }
 
+    /**
+     * P(S)
+     * @param sem semaphore
+     */
     public void wait(Semaphore sem){
         try {
             sem.acquire();
@@ -19,6 +23,10 @@ public class Clock extends Thread {
         }
     }
 
+    /**
+     * V(S)
+     * @param sem semaphore
+     */
     public void signal(Semaphore sem){
         sem.release();
     }
@@ -79,11 +87,13 @@ public class Clock extends Thread {
         wait(Shared.boardedPlaneSem);
 
         // flight length
-        gotToSleep(4000);
+        gotToSleep(5000);
 
         //signal the flight attendant to start disembarking plane
         signal(Shared.planeLandedSem);
 
+        // wait for the flight attendant to clean plane
+        // reusing a semaphore
         wait(Shared.boardedPlaneSem);
         msg("Airport closed");
 

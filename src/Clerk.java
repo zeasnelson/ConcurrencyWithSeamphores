@@ -12,8 +12,10 @@ public class Clerk extends Thread {
     //To store the number of passengers that this clerk helps
     private int numOfPassengersHelped;
 
+    // for the passengers to form lines
     private Semaphore lineSem;
 
+    // for the clerk to assign seat and zone numbers
     private Queue<Passenger> lineQueue;
 
 
@@ -23,8 +25,8 @@ public class Clerk extends Thread {
      */
     public Clerk( String threadName ){
         super(threadName);
-        this.lineQueue = new LinkedList();
-        this.lineSem = new Semaphore(0, true);
+        this.lineQueue = new LinkedList<>();
+        this.lineSem = new Semaphore(Shared.counterNum, true);
     }
 
     public Semaphore getLineSem() {
@@ -35,7 +37,10 @@ public class Clerk extends Thread {
         this.lineQueue.add(passenger);
     }
 
-
+    /**
+     * P(S)
+     * @param sem semaphore
+     */
     public void wait(Semaphore sem){
         try {
             sem.acquire();
@@ -44,6 +49,10 @@ public class Clerk extends Thread {
         }
     }
 
+    /**
+     * V(S)
+     * @param sem semaphore
+     */
     public void signal(Semaphore sem){
         sem.release();
     }
@@ -135,7 +144,6 @@ public class Clerk extends Thread {
         while (run){
             wait(Shared.mutex);
             if( Shared.numberOfPassengers != 0 ){
-                if( lineSem.hasQueuedThreads() ){
                     Passenger passenger = lineQueue.poll();
                     if( passenger != null ){
                         int seatNum = getSeatNum();
@@ -144,12 +152,14 @@ public class Clerk extends Thread {
                         passenger.setZoneNum(zoneNum);
                         // take .5 seconds to generate a seat and zone number
                         goToSleep(500);
+                        // signal the passenger to go to gate
+                        signal(passenger.getToGateSem());
+
                         msg(passenger.getName() + " assigned seatNum: " + seatNum + " zoneNum: " + zoneNum);
                         signal(lineSem);
                         Shared.numberOfPassengers--;
                         numOfPassengersHelped++;
                     }
-                }
             }
             else
                 run = false;

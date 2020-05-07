@@ -8,22 +8,31 @@ public class FlightAttendant extends Thread {
     //To store the start of this thread
     private long startTime;
 
+    // to store the number of groups of passengers
+    private int numOfGroups;
+
+    // each zone has its own blocking semaphore
     private Semaphore zoneOneSem;
     private Semaphore zoneTwoSem;
     private Semaphore zoneThreeSem;
+
+    // blocking sem for the clock thread to signal the flightAttendant to start boarding
     private Semaphore startBoardingSem;
+
+    // blocking sem the last passenger signals the flightAttendant to start cleaning plane
     private Semaphore goHomeSem;
 
-    private Queue<Passenger> zoneOneQueue;
-    private Queue<Passenger> zoneTwoQueue;
-    private Queue<Passenger> zoneThreeQueue;
+    // to pull all passengers that don't miss the flight
     private Queue<Passenger> passengersQueue;
 
+    // all passengers that boarded the plane,
+    // to be able to disembark the plane is ascending order by seatNum
     private ArrayList<Passenger> passengersList;
 
-
+    //constructor
     public FlightAttendant(){
         super("FlightAttendant");
+        this.numOfGroups = 0;
         this.passengersList   = new ArrayList<>();
 
         this.startBoardingSem = new Semaphore(0, false);
@@ -32,13 +41,12 @@ public class FlightAttendant extends Thread {
         this.zoneThreeSem     = new Semaphore(0, true);
         this.goHomeSem        = new Semaphore(0, false);
 
-        this.zoneOneQueue     = new LinkedList<>();
-        this.zoneTwoQueue     = new LinkedList<>();
-        this.zoneThreeQueue   = new LinkedList<>();
         this.passengersQueue  = new LinkedList<>();
 
     }
 
+
+    // getters and setters
     public Semaphore getZoneOneLineSem() {
         return zoneOneSem;
     }
@@ -57,28 +65,12 @@ public class FlightAttendant extends Thread {
         return startBoardingSem;
     }
 
-    public void wait(Semaphore sem){
-        try {
-            sem.acquire();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public int getNumOfPassengersInPlane(){
+        return passengersList.size();
     }
 
-    public void signal(Semaphore sem){
-        sem.release();
-    }
-
-    public void addToZoneOneQueue(Passenger passenger){
-        zoneOneQueue.add(passenger);
-    }
-
-    public void addToZoneTwoQueue(Passenger passenger){
-        zoneTwoQueue.add(passenger);
-    }
-
-    public void addToZoneThreeQueue(Passenger passenger){
-        zoneThreeQueue.add(passenger);
+    public void sortBySeatNumber(){
+        passengersList.sort(Passenger::compareSeatNumber);
     }
 
     public void msg(String msg){
@@ -89,24 +81,41 @@ public class FlightAttendant extends Thread {
         return System.currentTimeMillis() - this.startTime;
     }
 
-    public void sortBySeatNumber(){
-        passengersList.sort(Passenger::compareSeatNumber);
+    /**
+     * P(S)
+     * @param sem semaphore
+     */
+    public void wait(Semaphore sem){
+        try {
+            sem.acquire();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
+    /**
+     * V(S)
+     * @param sem semaphore
+     */
+    public void signal(Semaphore sem){
+        sem.release();
+    }
+
+    /**
+     * Add a passenger to the list of passengers who are boarding the plane
+     * @param passenger the passenger to be added to the list
+     */
     public void addPassToPlaneList(Passenger passenger){
         this.passengersList.add(passenger);
     }
 
+    /**
+     * Add a passenger to a queue
+     * This are the passengers who don't miss the flight
+     * @param passenger the passenger to be added to the queue
+     */
     public void addPassToWaitGate(Passenger passenger){
         this.passengersQueue.add(passenger);
-    }
-
-    public void waitToStartBoarding(){
-        try {
-            startBoardingSem.acquire();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -118,59 +127,65 @@ public class FlightAttendant extends Thread {
             sleep(milli);
         } catch (InterruptedException e) {
 //            e.printStackTrace();
-            System.out.println("Ooops. Looks like the flight attendant just quit");
+            System.out.println("Oops. Looks like the flight attendant just quit");
         }
     }
 
-
-
-    public void boardPlane(Semaphore lineSem, Queue<Passenger> lineQueue, int zone){
+    /**
+     * For each zone, make groups of 4 passengers and board plane
+     * @param lineSem zone line semaphore
+     * @param zone the zone being boarded
+     */
+    public void boardPlane(Semaphore lineSem, int zone){
         int groupSizeCount  = 0;
-        int totalPassengers = lineQueue.size();
-        int groupNum        = Shared.groupNum;
-        // This is pretty much the same algorithm used in the Producer-Consumer threads from class
-        while ( totalPassengers > 0 ){
-            wait(Shared.mutex);
+        int groupNum  = Shared.groupNum;
+
+        while ( lineSem.hasQueuedThreads() ){
+            // there is only one flightAttendant using this variable, no need to protect with mutex
             groupSizeCount++;
-            totalPassengers--;
-            if( totalPassengers == 0 && groupSizeCount % groupNum != 0 ){
-                groupNum = groupSizeCount = groupSizeCount % groupNum;
-            }
-            signal(Shared.mutex);
             signal(lineSem);
             if (groupSizeCount % groupNum == 0) {
                 for (int i = 0; i < groupNum; i++) {
                     signal(Shared.groupMutex);
                 }
                 // sleep to let the previous group enter the plane
-                goToSleep(100);
-                Shared.numOfPassengersInPlane += groupNum;
-                msg("group: " + ++Shared.numOfGroups + " size: " + groupNum + " in zone " + zone + " entered plane");
+                goToSleep(200);
+                msg("group: " + ++numOfGroups + " in zone " + zone + " entered plane");
             }
         }
     }
 
+    /**
+     * All the passengers who missed the flight should still be waiting in gateWaitingArea semaphore
+     * The if statement in the passenger thread will allow the passenger to gracefully terminate
+     */
     public void rebookFlights(){
         // if any passenger missed a flight
         while (Shared.gateWaitingAreaSem.hasQueuedThreads()){
             Passenger passenger = passengersQueue.poll();
             if( passenger != null ) {
-                msg(passenger.getName() + " missed the flight");
+                msg(passenger.getName() + " zoneNum: " + passenger.getZoneNum() + " missed the flight");
                 signal(Shared.gateWaitingAreaSem);
             }
         }
     }
 
+    /**
+     * Sorts the passengersList by seatNum and signals the passenger's exit semaphore
+     */
     public void disembarkPassengers(){
         sortBySeatNumber();
         for( Passenger passenger : passengersList ){
-            passenger.exitPlane();
-
+            signal(passenger.getExitPlaneSem());
             //wait .5 secs to let next passenger exit plane
             goToSleep(500);
         }
     }
 
+    /**
+     * All passengers who made it to the gate will be released here
+     * when the flightAttendant begins calling zones
+     */
     public void callPassengers(){
         int size = Shared.gateWaitingAreaSem.getQueueLength();
         int i = 0;
@@ -190,10 +205,9 @@ public class FlightAttendant extends Thread {
 
         msg("started. Waiting to start calling passengers");
         //wait until Clock signals to start boarding
-        waitToStartBoarding();
+        wait(startBoardingSem);
 
         msg("Started boarding plane");
-        msg("All passengers should walk to their respective lines");
 
         // call all passenger in waitingArea to their zones
         // if a passenger is not in this semaphore, then the passenger missed the flight
@@ -204,13 +218,15 @@ public class FlightAttendant extends Thread {
         goToSleep(4000);
 
 
-
+        msg("zone 1 passengers can enter plane  in groups of 4");
         // board zone 1
-        boardPlane(zoneOneSem, zoneOneQueue, 1);
+        boardPlane(zoneOneSem, 1);
         // board zone 2
-        boardPlane(zoneTwoSem, zoneTwoQueue, 2);
+        msg("zone 2 passengers can enter plane in groups of 4");
+        boardPlane(zoneTwoSem, 2);
         // board zone 3
-        boardPlane(zoneThreeSem, zoneThreeQueue, 3);
+        msg("zone 3 passengers can enter plane in groups of 4");
+        boardPlane(zoneThreeSem, 3);
 
         // wait for all passengers inside plane to seat
         goToSleep(1000);
@@ -229,11 +245,8 @@ public class FlightAttendant extends Thread {
         wait(Shared.planeLandedSem);
 
         msg("Plane is about to land");
-
-        //wake up all passengers (signal)
-        wait(Shared.mutex);
-        Shared.numberOfPassengers = 0;
-        signal(Shared.mutex);
+        goToSleep(1000);
+        msg("Plane landed. Leave in ascending order by seat number");
 
         // let passengers exit plane
         disembarkPassengers();

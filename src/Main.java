@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.concurrent.Semaphore;
 
 public class Main {
 
@@ -7,6 +6,7 @@ public class Main {
 
         Shared.numberOfPassengers = 30;
         Shared.groupNum = 4;
+        Shared.counterNum = 3;
 
         FlightAttendant flightAttendant = new FlightAttendant();
         Clerk clerkOne = new Clerk("ClerkOne");
@@ -24,10 +24,6 @@ public class Main {
         clerkTwo.start();
         flightAttendant.start();
 
-
-
-
-
-
     }
+
 }
