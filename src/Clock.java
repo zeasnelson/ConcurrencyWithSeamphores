@@ -96,6 +96,7 @@ public class Clock extends Thread {
         // reusing a semaphore
         wait(Shared.boardedPlaneSem);
         msg("Airport closed");
+        msg("Clock terminated");
 
     }
 }

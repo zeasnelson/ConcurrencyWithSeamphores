@@ -150,12 +150,13 @@ public class Clerk extends Thread {
                         int zoneNum = getZone(seatNum);
                         passenger.setSeatNum(seatNum);
                         passenger.setZoneNum(zoneNum);
+                        msg(passenger.getName() + " assigned seatNum: " + seatNum + " zoneNum: " + zoneNum);
+
                         // take .5 seconds to generate a seat and zone number
                         goToSleep(500);
                         // signal the passenger to go to gate
                         signal(passenger.getToGateSem());
 
-                        msg(passenger.getName() + " assigned seatNum: " + seatNum + " zoneNum: " + zoneNum);
                         signal(lineSem);
                         Shared.numberOfPassengers--;
                         numOfPassengersHelped++;
@@ -167,6 +168,6 @@ public class Clerk extends Thread {
             signal(Shared.mutex);
         }
 
-        msg("Helped " + numOfPassengersHelped + " passengers. Going home");
+        msg("Helped " + numOfPassengersHelped + " passengers. Going home - terminated");
     }
 }

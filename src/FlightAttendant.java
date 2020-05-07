@@ -259,7 +259,7 @@ public class FlightAttendant extends Thread {
         msg("cleaning plane...");
         goToSleep(2000);
         msg("Finished cleaning");
-        msg("Going home");
+        msg("Going home - terminated");
         signal(Shared.boardedPlaneSem);
 
     }
