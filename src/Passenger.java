@@ -21,7 +21,7 @@ public class Passenger extends Thread {
     // reference to the flightAttendant
     private FlightAttendant flightAttendant;
 
-    // to let the passenger know when its time to exit plane
+    // blocking sem to let the passenger know when its time to exit plane
     private Semaphore exitPlaneSem;
 
     // blocking sem for the clerk to let this passenger continue to the gate
@@ -40,6 +40,8 @@ public class Passenger extends Thread {
         this.goToGateSem  = new Semaphore(0, false);
     }
 
+
+    // getters and setters
     public void setMissedFlight(Boolean missedFlight) {
         this.missedFlight = missedFlight;
     }
@@ -122,6 +124,7 @@ public class Passenger extends Thread {
     /**
      * Assign this passenger to one of the clerk lines
      * the clerk line is randomly assigned
+     * The line is randomly chosen
      */
     public void goToClerkLine(){
         /*
@@ -131,13 +134,19 @@ public class Passenger extends Thread {
         int random = (int) Math.round(Math.random());
         switch (random) {
             case 0:
+                wait(Shared.mutex);
                 clerkOne.addPassenger(this);
+                signal(Shared.mutex);
                 msg("arrived to the airport. Waiting for clerkOne");
+
                 wait(clerkOne.getLineSem());
                 break;
             case 1:
+                wait(Shared.mutex);
                 clerkTwo.addPassenger(this);
+                signal(Shared.mutex);
                 msg("arrived to the airport. Waiting for clerkTwo");
+
                 wait(clerkTwo.getLineSem());
         }
 
@@ -176,16 +185,17 @@ public class Passenger extends Thread {
         wait(goToGateSem);
 
         msg("Walking to the gate");
+        // passengers take between 3 and 6 seconds to get through the gate
         randomTime = rand.nextInt(3000)+3000;
         goToSleep(randomTime);
         msg("arrived at gate. Waiting for flight attendant to call");
 
-
+        // add this passengers to a list, queue is managed by flight attendant
         wait(Shared.mutex);
         flightAttendant.addPassToWaitGate(this);
         signal(Shared.mutex);
 
-        //wait at gate
+        // wait until flight attendant calls
         wait(Shared.gateWaitingAreaSem);
 
 
@@ -193,8 +203,10 @@ public class Passenger extends Thread {
         randomTime = rand.nextInt(1000) + 1000;
         goToSleep(randomTime);
 
+        // check if this passenger missed the flight
         if( !missedFlight ) {
 
+            // passenger that don't miss the flight go to a different queue
             signal(Shared.mutex);
             flightAttendant.addPassToPlaneList(this);
             wait(Shared.mutex);

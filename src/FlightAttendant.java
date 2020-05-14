@@ -218,12 +218,14 @@ public class FlightAttendant extends Thread {
         goToSleep(4000);
 
 
-        msg("zone 1 passengers can enter plane  in groups of 4");
         // board zone 1
+        msg("zone 1 passengers can enter plane  in groups of 4");
         boardPlane(zoneOneSem, 1);
+
         // board zone 2
         msg("zone 2 passengers can enter plane in groups of 4");
         boardPlane(zoneTwoSem, 2);
+
         // board zone 3
         msg("zone 3 passengers can enter plane in groups of 4");
         boardPlane(zoneThreeSem, 3);

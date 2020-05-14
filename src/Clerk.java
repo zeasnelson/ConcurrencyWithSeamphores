@@ -139,7 +139,6 @@ public class Clerk extends Thread {
         goToSleep(2000);
         msg("ready to help passengers");
 
-        //
         boolean run = true;
         while (run){
             wait(Shared.mutex);

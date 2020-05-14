@@ -14,7 +14,7 @@ public class Shared {
 
 
     //For the clerks to generate unique seat numbers
-    static int [] ticketNumbers      = new int[31];
+    static int [] ticketNumbers = new int[31];
 
 
 
@@ -22,7 +22,7 @@ public class Shared {
     // to block all passengers that arrive to the waiting gate
     static Semaphore gateWaitingAreaSem = new Semaphore(0, true);
 
-    // The clock waits in this semaphore until the flightAttendant signal
+    // The clock waits in this semaphore until the flightAttendant signals
     // that all passengers boarded the plane
     static Semaphore boardedPlaneSem    = new Semaphore(0, true);
 
@@ -38,7 +38,7 @@ public class Shared {
     // to create groups when passengers board the plane
     static Semaphore groupMutex         = new Semaphore(1, true);
 
-    // To enforce M.E in over different CSs
+    // To enforce M.E over different CSs
     static Semaphore mutex              = new Semaphore(1, true);
 
 
