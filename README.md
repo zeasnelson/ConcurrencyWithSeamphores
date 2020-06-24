@@ -57,3 +57,23 @@ Thread-1, Thread-3, Thread-4, Thread-2;</p>
 
 <p>The passengers disperse after the flight and go off to their respective destinations (threads terminate).
 The flight attendant cleans the aircraft and is the last to leave after all the passengers. (thread terminates).</p>
+
+A few things to note:
+<ul>
+  <li>In order to keep track of time, there needs to be a clock thread. The clock thread signals
+the flight attendant when it’s time to start the boarding process and disembark the plane. <br />
+The clock will sleep for a fixed amount of time before and in between these two events.
+After all passengers have disembarked, the clock will announce that it is terminating and
+    then terminate.</li>
+  <li>Make it very clear which passenger thread departs the plane and what their seat number
+is. A message indicating departure might look like this:<br />
+    Passenger-1: is in seat 6 and departs the plane.</li>
+
+<li> Initial values:
+  <ul>
+    <li>numPassengers = 30</li>
+    <li>groupNum = 4</li>
+    <li>counterNum = 3</li>
+  </ul>
+  </li>
+  </ul>
