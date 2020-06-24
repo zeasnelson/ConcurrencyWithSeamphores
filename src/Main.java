@@ -7,7 +7,7 @@ public class Main {
 
         // num of passengers in simulation
         try {
-            Shared.numberOfPassengers = Integer.valueOf(args[0]);
+            Shared.numberOfPassengers = Integer.parseInt(args[0]);
             if( Shared.numberOfPassengers < 0 || Shared.numberOfPassengers > 30 ) {
                 System.out.print("The number of passengers must be between 0 - 30");
                 return;
